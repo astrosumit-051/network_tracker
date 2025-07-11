@@ -1,0 +1,46 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Contact {
+  id                   String        @id @default(uuid())
+  firstName            String
+  lastName             String
+  email                String        @unique
+  phone                String?       
+  company              String?       
+  title                String?       
+  linkedinUrl          String?       
+  website              String?       
+  tags                 String[]      @default([])
+  source               String?       
+  priority             String?       // High / Med / Low
+  timezone             String?       
+  location             String?       
+  birthday             DateTime?     
+  status               String?       // Prospect, Active, Dormant, Closed
+  customFields         Json?         // any extra key–value pairs
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  interactions         Interaction[]
+}
+
+model Interaction {
+  id                 String    @id @default(uuid())
+  contact            Contact   @relation(fields: [contactId], references: [id])
+  contactId          String
+  date               DateTime  
+  type               String    // call, email, meeting, event, etc.
+  notes              String
+  nextFollowUpDate   DateTime? 
+  reminderSet        Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+}
