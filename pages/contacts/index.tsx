@@ -3,60 +3,80 @@ import { useState, useEffect } from 'react';
 import ContactList from '../../components/ContactList';
 import { Contact } from '@prisma/client';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import Link from 'next/link'; // For "Add Contact" button
+import Link from 'next/link';
 
 export default function ContactsPage() {
   const { data: session, status } = useSession();
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loading, setLoading] = useState(true); // For contact data fetching
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 1. Redirect unauthenticated users
   useEffect(() => {
-    if (status === 'authenticated') {
-      const fetchContacts = async () => {
-        try {
-          setLoading(true);
-          // Ensure API routes are protected as well
-          const response = await fetch('/api/contacts');
-          if (!response.ok) {
-            if (response.status === 401) { // Handle unauthorized access specifically
-                signIn(); // or redirect to login
-                return;
-            }
-            throw new Error(`Error: ${response.statusText}`);
+    if (status === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: '/contacts' });
+    }
+  }, [status]);
+
+  // 2. Fetch contacts once we're authenticated
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    const fetchContacts = async () => {
+      try {
+        const res = await fetch('/api/contacts');
+        if (!res.ok) {
+          if (res.status === 401) {
+            // session expired or unauthorized
+            signIn(undefined, { callbackUrl: '/contacts' });
+            return;
           }
-          const data: Contact[] = await response.json();
+          throw new Error(res.statusText || 'Failed to fetch contacts');
+        }
+        const data: Contact[] = await res.json();
+        if (!cancelled) {
           setContacts(data);
-        } catch (err) {
+        }
+      } catch (err) {
+        if (!cancelled) {
           setError((err as Error).message);
-        } finally {
+        }
+      } finally {
+        if (!cancelled) {
           setLoading(false);
         }
-      };
-      fetchContacts();
-    }
-  }, [status]); // Re-fetch if auth status changes
+      }
+    };
 
+    fetchContacts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status]);
+
+  // 3. Handle loading / redirect states
   if (status === 'loading') {
     return <p className="text-center py-10">Loading session...</p>;
   }
 
-  if (!session) {
-    useEffect(() => {
-      if (status === 'unauthenticated') {
-        signIn(undefined, { callbackUrl: '/contacts' });
-      }
-    }, [status]);
+  if (status === 'unauthenticated') {
     return <p className="text-center py-10">Redirecting to sign in...</p>;
   }
 
-  // Render page content for authenticated users
+  // 4. Render for authenticated users
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Contacts</h1>
         <div>
-          <span className="text-sm mr-4">Signed in as {session.user?.email}</span>
+          <span className="text-sm mr-4">
+            Signed in as {session.user?.email}
+          </span>
           <button
             onClick={() => signOut({ callbackUrl: '/auth/signin' })}
             className="px-4 py-2 bg-red-500 hover:bg-red-700 text-white font-bold rounded shadow text-sm"
@@ -74,15 +94,21 @@ export default function ContactsPage() {
         </Link>
       </div>
 
-      {loading && !error && <p className="text-center py-8">Loading contacts...</p>}
-      {error && <p className="text-center py-8 text-red-500">Error loading contacts: {error}</p>}
+      {loading && !error && (
+        <p className="text-center py-8">Loading contacts...</p>
+      )}
+      {error && (
+        <p className="text-center py-8 text-red-500">
+          Error loading contacts: {error}
+        </p>
+      )}
       {!loading && !error && contacts.length > 0 && (
         <ContactList contacts={contacts} />
       )}
       {!loading && !error && contacts.length === 0 && (
         <div className="text-center py-10">
-            <p className="text-xl text-gray-600 mb-4">No contacts found.</p>
-            <p className="text-gray-500">Why not add your first one?</p>
+          <p className="text-xl text-gray-600 mb-4">No contacts found.</p>
+          <p className="text-gray-500">Why not add your first one?</p>
         </div>
       )}
     </div>
