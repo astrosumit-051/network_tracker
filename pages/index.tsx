@@ -47,10 +47,6 @@ export default function Home() {
     }
   }, [status]);
 
-  if (status === 'loading') {
-    return <p className="text-center py-10">Loading session...</p>;
-  }
-
   useEffect(() => {
     if (status === 'unauthenticated') {
       signIn(); // Redirects to sign-in page configured in NextAuth
@@ -60,6 +56,8 @@ export default function Home() {
   if (status === 'loading') {
     return <p className="text-center py-10">Loading session...</p>;
   }
+
+  
 
   if (!session) {
     // Session is not loaded yet or user is unauthenticated
