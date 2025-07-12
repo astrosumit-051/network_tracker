@@ -51,14 +51,16 @@ export default function Home() {
     return <p className="text-center py-10">Loading session...</p>;
   }
 
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      signIn(); // Redirects to sign-in page configured in NextAuth
+    }
+  }, [status]);
+
+  
+
   if (!session) {
-    // Not signed in, redirect to sign-in page or show sign-in button
-    // For automatic redirection, handle in useEffect:
-    useEffect(() => {
-      if (status === 'unauthenticated') {
-        signIn(); // Redirects to sign-in page configured in NextAuth
-      }
-    }, [status]);
+    // Session is not loaded yet or user is unauthenticated
     return <p className="text-center py-10">Redirecting to sign in...</p>;
   }
 

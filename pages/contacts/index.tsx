@@ -1,64 +1,39 @@
 // pages/contacts/index.tsx
-import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import ContactList from '../../components/ContactList';
 import { Contact } from '@prisma/client';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import Link from 'next/link';
 
-export default function ContactsPage() {
-  const { data: session, status } = useSession();
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Redirect if unauthenticated
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: '/contacts' });
+const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) {
+    if (res.status === 401) {
+      signIn();
     }
-  }, [status]);
+    throw new Error(`An error occurred while fetching the data: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+});
 
-  // Fetch contacts once authenticated
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    let cancelled = false;
+export default function ContactsPage() {
+  const { data: session, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      signIn(undefined, { callbackUrl: '/contacts' });
+    },
+  });
 
-    const fetchContacts = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch('/api/contacts');
-        if (!res.ok) {
-          if (res.status === 401) {
-            signIn(undefined, { callbackUrl: '/contacts' });
-            return;
-          }
-          throw new Error(res.statusText || 'Failed to fetch contacts');
-        }
-        const data: Contact[] = await res.json();
-        if (!cancelled) setContacts(data);
-      } catch (err) {
-        if (!cancelled) setError((err as Error).message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    fetchContacts();
-    return () => {
-      cancelled = true;
-    };
-  }, [status]);
+  const { data: contacts, error } = useSWR<Contact[]>('/api/contacts', fetcher);
 
   if (status === 'loading') {
     return <p className="text-center py-10">Loading session...</p>;
   }
-  if (status === 'unauthenticated') {
-    return <p className="text-center py-10">Redirecting to sign in...</p>;
+
+  // Session is required, so session object will be available here
+  if (!session) {
+      return null; // Or a loading indicator
   }
 
-  // ——— Here’s the only change ———
-  // Signed in as {session?.user?.email}
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-6">
@@ -84,18 +59,12 @@ export default function ContactsPage() {
         </Link>
       </div>
 
-      {loading && !error && (
-        <p className="text-center py-8">Loading contacts...</p>
-      )}
-      {error && (
-        <p className="text-center py-8 text-red-500">
-          Error loading contacts: {error}
-        </p>
-      )}
-      {!loading && !error && contacts.length > 0 && (
+      {error && <p className="text-center py-8 text-red-500">Error loading contacts.</p>}
+      {!contacts && !error && <p className="text-center py-8">Loading contacts...</p>}
+      {contacts && contacts.length > 0 && (
         <ContactList contacts={contacts} />
       )}
-      {!loading && !error && contacts.length === 0 && (
+      {contacts && contacts.length === 0 && (
         <div className="text-center py-10">
           <p className="text-xl text-gray-600 mb-4">No contacts found.</p>
           <p className="text-gray-500">Why not add your first one?</p>
