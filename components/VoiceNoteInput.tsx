@@ -64,7 +64,7 @@ export default function VoiceNoteInput({
         recognitionRef.current.stop();
       }
     };
-  }, [onChange, value]); // Added value to dependencies if recognition logic depends on it (e.g. for appending)
+  }, [onChange, value, listening]); // Added value to dependencies if recognition logic depends on it (e.g. for appending)
 
   const toggleListening = () => {
     if (!recognitionRef.current) {

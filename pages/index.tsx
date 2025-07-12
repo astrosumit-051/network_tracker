@@ -47,15 +47,15 @@ export default function Home() {
     }
   }, [status]);
 
-  if (status === 'loading') {
-    return <p className="text-center py-10">Loading session...</p>;
-  }
-
   useEffect(() => {
     if (status === 'unauthenticated') {
       signIn(); // Redirects to sign-in page configured in NextAuth
     }
   }, [status]);
+
+  if (status === 'loading') {
+    return <p className="text-center py-10">Loading session...</p>;
+  }
 
   
 
