@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import useSWR from 'swr';
 import ContactDetail from '../../components/ContactDetail';
 import InteractionForm from '../../components/InteractionForm';
 import { Contact, Interaction } from '@prisma/client';
@@ -8,69 +8,44 @@ import Link from 'next/link';
 
 type ContactWithInteractions = Contact & { interactions: Interaction[] };
 
+const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) {
+    if (res.status === 401) signIn();
+    throw new Error('Failed to fetch');
+  }
+  return res.json();
+});
+
 export default function ContactPage() {
   const router = useRouter();
   const { id } = router.query;
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      if (id) signIn(undefined, { callbackUrl: `/contacts/${id}` });
+      else signIn();
+    },
+  });
 
-  const [contact, setContact] = useState<ContactWithInteractions | null>(null);
-  const [loading, setLoading] = useState(true); // For contact data fetching
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchContactDetails = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/contacts/${id}`);
-        if (response.status === 401) return signIn();
-        if (response.status === 404) {
-          setError('Contact not found.');
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(`Error: ${response.statusText}`);
-        }
-        const data: ContactWithInteractions = await response.json();
-        setContact(data);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (status === 'authenticated') {
-      fetchContactDetails();
-    }
-  }, [id, status]);
+  const { data: contact, error, mutate } = useSWR<ContactWithInteractions>(
+    id ? `/api/contacts/${id}` : null,
+    fetcher
+  );
 
   const handleInteractionAdded = () => {
-    if (!id) return;
-    // Re-fetch contact details to get the updated list of interactions
-    async function fetchInteractions() {
-        const response = await fetch(`/api/contacts/${id}`);
-        if(response.ok) {
-            const data: ContactWithInteractions = await response.json();
-            setContact(data);
-        }
-    }
-    fetchInteractions();
+    mutate();
   };
 
-  if (status === 'loading' || (loading && !error)) {
+  if (status === 'loading' || (!contact && !error)) {
     return <p className="text-center py-10">Loading...</p>;
   }
 
-  if (status === 'unauthenticated') {
-      useEffect(() => {
-        signIn(undefined, { callbackUrl: `/contacts/${id}` });
-      }, []);
-      return <p className="text-center py-10">Redirecting to sign in...</p>;
+  if (!session) {
+    return null; // Redirected by onUnauthenticated
   }
 
-  if (error) return <p className="text-center py-8 text-red-500">{error}</p>;
-  if (!contact) return <p className="text-center py-8">Contact data could not be loaded.</p>;
+  if (error) return <p className="text-center py-8 text-red-500">Failed to load contact.</p>;
+  if (!contact) return <p className="text-center py-8">Contact not found.</p>;
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-8">
