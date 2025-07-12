@@ -13,7 +13,7 @@ export default function ContactsPage() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      async function fetchContacts() {
+      const fetchContacts = async () => {
         try {
           setLoading(true);
           // Ensure API routes are protected as well
@@ -32,7 +32,7 @@ export default function ContactsPage() {
         } finally {
           setLoading(false);
         }
-      }
+      };
       fetchContacts();
     }
   }, [status]); // Re-fetch if auth status changes
