@@ -10,7 +10,7 @@ const fetcher = (url: string) => fetch(url).then(res => {
     if (res.status === 401) {
       signIn();
     }
-    throw new Error('An error occurred while fetching the data.');
+    throw new Error(`An error occurred while fetching the data: ${res.status} ${res.statusText}`);
   }
   return res.json();
 });
