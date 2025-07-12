@@ -84,19 +84,18 @@ export default function Home() {
         <p>Loading dashboard data...</p>
       ) : stats ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold text-gray-700">Total Contacts</h2>
-            <p className="text-4xl font-bold text-indigo-600 mt-2">{stats.totalContacts}</p>
-            <Link href="/contacts" legacyBehavior>
-              <a className="mt-4 inline-block text-indigo-600 hover:text-indigo-800">View Contacts &rarr;</a>
-            </Link>
-          </div>
-          <div className="p-6 bg-white rounded-lg shadow">
+          <Link href="/contacts" legacyBehavior>
+            <a className="p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer">
+              <h2 className="text-xl font-semibold text-gray-700">Total Contacts</h2>
+              <p className="text-4xl font-bold text-indigo-600 mt-2">{stats.totalContacts}</p>
+              <p className="mt-4 text-indigo-600 hover:text-indigo-800">View Contacts &rarr;</p>
+            </a>
+          </Link>
+          <a href="#" className="p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer">
             <h2 className="text-xl font-semibold text-gray-700">Upcoming Follow-Ups</h2>
             <p className="text-4xl font-bold text-indigo-600 mt-2">{stats.upcomingReminders}</p>
-            {/* You might want a link to a page showing these reminders */}
-            <a href="#" className="mt-4 inline-block text-indigo-600 hover:text-indigo-800">View Reminders &rarr;</a>
-          </div>
+            <p className="mt-4 text-indigo-600 hover:text-indigo-800">View Reminders &rarr;</p>
+          </a>
         </div>
       ) : (
         <p>Could not load dashboard data.</p>
@@ -109,7 +108,11 @@ export default function Home() {
                     Add New Contact
                 </a>
             </Link>
-            {/* Add other quick actions here, e.g., Add Interaction, View Calendar */}
+            <Link href="/interactions/new" legacyBehavior>
+                <a className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md shadow">
+                    Log an Interaction
+                </a>
+            </Link>
           </div>
       </div>
     </div>
